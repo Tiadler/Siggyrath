@@ -213,7 +213,7 @@ export default function Page() {
           backgroundAttachment: 'fixed',
         }}
       >
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-[1px]" />
+        <div className="absolute inset-0 bg-black/0 backdrop-blur-[1px]" />
 
         <div className="relative max-w-3xl mx-auto py-12 space-y-12">
           {messages.length === 0 && (
