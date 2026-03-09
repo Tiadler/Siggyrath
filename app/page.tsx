@@ -213,6 +213,10 @@ export default function Page() {
           backgroundAttachment: 'fixed',
         }}
       >
+        <div className="absolute top-4 left-4 z-20 px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-md text-sm text-white/40 border border-white/10">
+          Created by Tiadler
+        </div>
+
         <div className="absolute inset-0 bg-black/0 backdrop-blur-[1px]" />
 
         <div className="relative max-w-3xl mx-auto py-12 space-y-12">
