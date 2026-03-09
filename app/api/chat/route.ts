@@ -25,25 +25,71 @@
 //   }
 // }
 
-import { NextResponse } from "next/server";
+
+
+
+
+import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
+
+export const runtime = 'nodejs';
+
+const client = new OpenAI({
+  apiKey: process.env.POE_API_KEY,
+  baseURL: 'https://api.poe.com/v1',
+});
+
+type Message = {
+  id?: string;
+  role: 'user' | 'assistant';
+  content: string;
+};
 
 export async function POST(req: Request) {
   const body = await req.json();
+  const messages: Message[] = body.messages;
 
-  const messages = body.messages || [];
-  const lastMessage = messages[messages.length - 1]?.content || "";
+  const completion = await client.chat.completions.create({
+    model: 'siggyrath',
+    messages: messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    })),
+  });
 
-  // mock reply
-  const reply =
-    `🤖 Mock Bot Response\n\n` +
-    `You said:\n\n` +
-    `> ${lastMessage}\n\n` +
-    `This is a **mock response** because POE_API_KEY is not configured yet.\n\n` +
-    `Once the API key is added, this route will call Poe API.`;
+  let reply = completion.choices[0].message.content || '';
+
+  // ❗ bỏ toàn bộ phần từ "References" trở xuống
+  reply = reply.replace(/##\s*📚?\s*References[\s\S]*/i, '').trim();
 
   return NextResponse.json({
-    id: "mock-id",
-    role: "assistant",
     content: reply,
   });
 }
+
+
+
+
+
+// import { NextResponse } from "next/server";
+
+// export async function POST(req: Request) {
+//   const body = await req.json();
+
+//   const messages = body.messages || [];
+//   const lastMessage = messages[messages.length - 1]?.content || "";
+
+//   // mock reply
+//   const reply =
+//     `🤖 Mock Bot Response\n\n` +
+//     `You said:\n\n` +
+//     `> ${lastMessage}\n\n` +
+//     `This is a **mock response** because POE_API_KEY is not configured yet.\n\n` +
+//     `Once the API key is added, this route will call Poe API.`;
+
+//   return NextResponse.json({
+//     id: "mock-id",
+//     role: "assistant",
+//     content: reply,
+//   });
+// }
