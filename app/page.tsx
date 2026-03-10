@@ -124,6 +124,39 @@ export default function Page() {
     }
   };
 
+  const fetchAssistantReply = async (requestMessages: Message[]) => {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: requestMessages,
+      }),
+    });
+
+    const rawText = await res.text();
+
+    console.log('API status:', res.status);
+    console.log('API raw response:', rawText);
+
+    if (!res.ok) {
+      throw new Error(rawText || 'API request failed');
+    }
+
+    const data = JSON.parse(rawText);
+
+    const cleaned = (data.content || '')
+      .replace(/\[\[\d+\]\]\[doc_\d+\]/g, '')
+      .replace(/\[\[\d+\]\]/g, '')
+      .replace(/\[doc_\d+\]/g, '')
+      .replace(/##\s*📚?\s*References[\s\S]*/i, '')   // bỏ section References
+      .replace(/References[\s\S]*/i, '')              // fallback nếu không có ##
+      .trim();
+
+    return cleaned;
+  };
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isThinking) return;
 
@@ -135,54 +168,73 @@ export default function Page() {
       content: text,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const nextMessages = [...messages, userMessage];
+
+    setMessages(nextMessages);
     setInputValue('');
     setIsThinking(true);
 
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messages: [...messages, userMessage],
-      }),
-    });
+    try {
+      const cleaned = await fetchAssistantReply(nextMessages);
 
-    const rawText = await res.text();
+      const botMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: cleaned,
+      };
 
-    console.log('API status:', res.status);
-    console.log('API raw response:', rawText);
-
-    if (!res.ok) {
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
       setMessages((prev) => [
         ...prev,
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: rawText,
+          content: error instanceof Error ? error.message : 'Request failed',
         },
       ]);
+    } finally {
       setIsThinking(false);
-      return;
     }
+  };
 
-    const data = JSON.parse(rawText);
+  const handleRegenerate = async () => {
+    if (isThinking || messages.length === 0) return;
 
-    const cleaned = (data.content || '')
-      .replace(/\[\[\d+\]\]\[doc_\d+\]/g, '')
-      .replace(/\[\[\d+\]\]/g, '')
-      .replace(/\[doc_\d+\]/g, '');
+    const lastUserIndex = [...messages]
+      .map((m, i) => ({ ...m, index: i }))
+      .reverse()
+      .find((m) => m.role === 'user')?.index;
 
-    const botMessage: Message = {
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content: cleaned,
-    };
+    if (lastUserIndex === undefined) return;
 
-    setMessages((prev) => [...prev, botMessage]);
+    const requestMessages = messages.slice(0, lastUserIndex + 1);
 
-    setIsThinking(false);
+    setMessages(requestMessages);
+    setIsThinking(true);
+
+    try {
+      const cleaned = await fetchAssistantReply(requestMessages);
+
+      const botMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: cleaned,
+      };
+
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: error instanceof Error ? error.message : 'Regenerate failed',
+        },
+      ]);
+    } finally {
+      setIsThinking(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -199,6 +251,11 @@ export default function Page() {
       console.error('Copy failed:', error);
     }
   };
+
+  const lastAssistantIndex = [...messages]
+    .map((m, i) => ({ ...m, index: i }))
+    .reverse()
+    .find((m) => m.role === 'assistant')?.index;
 
   return (
     <div className="flex flex-col h-screen bg-black text-white font-sans selection:bg-white/20 overflow-hidden">
@@ -235,7 +292,7 @@ export default function Page() {
             </motion.div>
           )}
 
-          {messages.map((message) => (
+          {messages.map((message, index) => (
             <div key={message.id} className="space-y-4">
               {message.role === 'user' ? (
                 <div className="flex justify-end items-start gap-3">
@@ -251,7 +308,7 @@ export default function Page() {
                     />
 
                     <div className="text-[10px] text-center mt-1 text-white/40 font-medium">
-                      Zealot
+                      You
                     </div>
                   </div>
                 </div>
@@ -271,11 +328,26 @@ export default function Page() {
 
                   <div className="space-y-4 flex-1">
                     <div className="text-[16px] leading-relaxed text-white/90 prose prose-invert max-w-none bg-black/20 p-4 rounded-2xl backdrop-blur-sm border border-white/5">
-                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                      <ReactMarkdown
+                        components={{
+                          em: ({ children }) => (
+                            <span className="block text-xs text-white/50 italic my-2">
+                              {children}
+                            </span>
+                          ),
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
                     </div>
 
                     <div className="flex items-center gap-4 text-white/30">
-                      <button className="hover:text-white transition-colors">
+                      <button
+                        onClick={handleRegenerate}
+                        disabled={isThinking || index !== lastAssistantIndex}
+                        className="hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Regenerate latest response"
+                      >
                         <RotateCcw size={16} />
                       </button>
 
@@ -284,10 +356,6 @@ export default function Page() {
                         className="hover:text-white transition-colors"
                       >
                         <Copy size={16} />
-                      </button>
-
-                      <button className="hover:text-white transition-colors">
-                        <Share2 size={16} />
                       </button>
 
                       <button className="hover:text-white transition-colors">
@@ -313,7 +381,7 @@ export default function Page() {
                 <div className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce [animation-delay:0.2s]" />
                 <div className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce [animation-delay:0.4s]" />
 
-                <span className="ml-2">Thinking...</span>
+                <span className="ml-2">The ceremony is in progress....</span>
               </div>
             </div>
           )}
