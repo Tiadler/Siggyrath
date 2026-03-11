@@ -484,11 +484,7 @@ export default function Page() {
                           className="hover:text-white transition-colors"
                         >
                           <Copy size={16} />
-                        </button>
-
-                        <button className="hover:text-white transition-colors">
-                          <Share2 size={16} />
-                        </button>
+                        </button>x
 
                         <button className="hover:text-white transition-colors">
                           <MoreHorizontal size={16} />
@@ -605,14 +601,16 @@ export default function Page() {
                 className="
                   p-2.5
                   rounded-full
-                  bg-gradient-to-b from-emerald-300 to-emerald-500
                   text-black
                   shadow-[0_0_14px_rgba(16,185,129,0.42)]
-                  hover:shadow-[0_0_20px_rgba(16,185,129,0.65)]
-                  hover:from-emerald-200 hover:to-emerald-400
                   transition-all
                   disabled:opacity-60 disabled:cursor-not-allowed
                 "
+                style={{
+                  background: isThinking
+                    ? 'linear-gradient(to bottom, #86efac, #10b981)'
+                    : 'linear-gradient(to bottom, #86efac, #10b981)',
+                }}
               >
                 {inputValue.trim() ? (
                   <SendHorizontal size={20} />
