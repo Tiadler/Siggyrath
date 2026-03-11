@@ -35,3 +35,41 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #444;
 }
+
+@keyframes firefly-float {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.9);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.18;
+  }
+
+  25% {
+    transform: translate3d(calc(var(--drift) * 0.35), -20vh, 0) scale(1);
+    opacity: 0.28;
+  }
+
+  50% {
+    transform: translate3d(calc(var(--drift) * -0.4), -48vh, 0) scale(1.08);
+    opacity: 0.22;
+  }
+
+  75% {
+    transform: translate3d(calc(var(--drift) * 0.45), -78vh, 0) scale(0.98);
+    opacity: 0.16;
+  }
+
+  100% {
+    transform: translate3d(0, -110vh, 0) scale(0.85);
+    opacity: 0;
+  }
+}
+
+.animate-firefly-float {
+  animation-name: firefly-float;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
