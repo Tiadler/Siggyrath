@@ -509,7 +509,7 @@ export default function Page() {
                   <div className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce [animation-delay:0.2s]" />
                   <div className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce [animation-delay:0.4s]" />
 
-                  <span className="ml-2">The ceremony is in progress....</span>
+                  <span className="ml-2">The ceremony is in progress, wait for 15-20 seconds...</span>
                 </div>
               </div>
             )}
